@@ -1,1 +1,17 @@
-# Russian_Disinfo_Twitter
+# Analysis of Russian-linked disinformation on Twitter
+
+## Project overview
+This is the code repository for an ongoing project to analyze tweets collected in Twitter's Disinformation Operations [archive](https://transparency.twitter.com/en/reports/information-operations.html). The original collection consisted of tweets from accounts linked to the Internet Research Agency that were removed from Twitter following the 2016 presidential election. Since then, Twitter has added additional collections from accounts linked to actors in Russia and other countries. Given the prominence of Russian disinformation efforts (and my own background language knowledge), I've chosen to focus on Russian and English-language tweets here.
+
+The contours of the project are still fluid at this point. Three main avenues on inquiry come to mind, but these aren't final or exhaustive:
+* Examining thematic differences between Russian and English-language tweets to better understand disinformation targets and strategies.
+*  Analyzing whether topics emphasized by disinforamtion accounts changed after the 2016 election or subsequent crackdowns on disinformation
+*  Analyzing the prominence of tweet topics over time and comparing trends to media coverage to better understand whether disinformation had any association with changes in media coverage of controversial topics.  
+
+This last question getting at whether disinformation efforts had an effect on the 2016 election is, in my mind, the most important and easily the most difficult to actually assess. I'll develop the ideas as I go, but a hypothesis of "Did people exposed to Russian disinformation change their behavior?" is impossible to test using these data. We don't know who saw the tweets, what were their intentions or attitudes prior to seeing the tweets, and what they did afterwards. Short of that high standard of evidence, we can try to see whether shifts in themes emphasized in disinformation accounts precede changes in news coverage or vice versa. I suspect the latter is more likely, but it's empirical question.
+
+A broader question is the overall impact of disinformation on society. The spread of untrustworthy information has long-term corrosive effects on democracy in a variety of ways [(Mckay and Tenove 2021)](https://drive.google.com/file/d/12tXzEvYcV6HkiL7KCVJt0CeOPjaUgFiI/view). Even if you don't totally buy the argument that foreign disinformation campaigns on social media is a huge threat to Western democracies, lots of people in those societies think that misinformation and fake news is a [big problem](https://www.pewresearch.org/journalism/2019/06/05/many-americans-say-made-up-news-is-a-critical-problem-that-needs-to-be-fixed/). That seems worthy of further study.
+
+That's a much bigger question that I plan to take on, but is something that is in the background of this project. 
+
+I plan to update this Readme document as I go to describe the project in more detail and, eventually, explain how to reproduce the analyses. One thing that you won't find here is the actual data used in the analysis, which I haven't posted because you have to register with Twitter to gain access to the public data. It's also massive (the IRA archive csv file alone is almost 6GB) and won't fit on Github. The R code will walk you through the steps I took to process the data, so if you go to Twitter's Information Operations page, you can download the data there to start.  
