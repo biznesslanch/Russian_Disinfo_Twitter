@@ -15,6 +15,8 @@ Sys.setlocale("LC_CTYPE", "russian")
 ## couldn't load the entire file into memory on my laptop. I read in only relevant columns and then combined the 18
 ## dataframes into a single object.
 
+#library(data.table)
+
 # # Get list list of files in data directory 
 #filelist <- list.files(path = "E:/.../Data")
 #filelist <- filelist[1:18] #keep only numbers - will probably have to modify this later
