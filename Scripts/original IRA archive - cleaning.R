@@ -115,3 +115,4 @@ tweet_data_user_date <- tweet_data %>%
 
 # Save to csv
 write_csv(tweet_data_user_date, file=here("Data", "ira_archive-combined_daily.csv"))
+saveRDS(tweet_data_user_date, file=here("Data", "ira_archive-combined_daily.csv"))

@@ -43,14 +43,79 @@ new_ira_tweets <- new_ira_tweets %>%
 
 # Create quarters for use in stratified sampling later on
 new_ira_tweets<- new_ira_tweets %>% 
-  mutate(qtr_strat = floor_date(date, unit="quarter"))
+  mutate(qtr_strat = floor_date(date_time, unit="quarter"))
 
 ## Rename anonymous users - start with 2943 to match original IRA dataset
-# get vector of user names that have been anonymized
-user_names <- new_ira_tweets %>%
-  mutate(user_name2 = ifelse(str_length(user_screen_name)<=15, "REAL", "ANON")) %>%
-  mutate(user_id = user_screen_name) %>%
-  filter(user_name2=="ANON") %>% 
-  distinct(user_screen_name) %>% pull()
+# get vector of user names that have been anonymized and app
+ user_names <- new_ira_tweets %>%
+   mutate(user_name = ifelse(str_length(user_screen_name)<=15, "REAL", "ANON")) %>%
+   mutate(user_id = user_screen_name) %>%
+   filter(user_name=="ANON") %>% 
+   distinct(user_screen_name, user_name) %>%
+   # assign each anon a number, starting at 2943 so that it matches index created in original dataset
+   mutate(user_name = paste(user_name, as.character(seq(2943,2942+length(user_names),by=1)), sep="-"))
 
-user_num <- as.character(seq(2193,2943+length(user_names),by=1))
+# Categorize real vs. anonymized screen names
+new_ira_tweets <- new_ira_tweets %>% 
+  # real twitter usernames are capped at 15 characters, so this sorts users into those who have names and those who don't
+  mutate(user_name_type = case_when(str_length(user_screen_name)<=15 ~ "REAL", 
+                               TRUE ~ "ANON"))
+
+# Create separate dataframe of unique user_names and append index number to ANON prefix
+user_names <- new_ira_tweets %>%
+  filter(user_name_type=="ANON") %>% 
+  distinct(user_screen_name, user_name_type) %>%
+  # assign each anon a number, starting at 2943 so that it matches index created in original dataset
+  group_by(user_screen_name) %>%
+  mutate(user_name = paste(user_name_type, as.character((cur_group_id()+2942)), sep="-")) %>%
+  select(user_screen_name, user_name) %>%
+  ungroup()
+
+# Merge into main dataset using user screen name field
+new_ira_tweets <- new_ira_tweets %>%
+  left_join(.,user_names, by="user_screen_name") %>%
+  mutate(user_name = case_when(is.na(user_name) ~ user_screen_name,
+                               TRUE ~ user_name)) 
+
+rm(user_names)
+
+## create indicator for account languages used
+account_lang <- new_ira_tweets %>%
+  distinct(user_name, tweet_language) %>%
+  group_by(user_name) %>%
+  summarize(languages = paste(tweet_language, collapse="-")) %>%
+  mutate(bilingual_account = case_when(str_detect(languages,"-") ~ "Bilingual",
+                                       TRUE ~ "One Language")) %>%
+  ungroup() %>%
+  select(-languages)
+
+# merge back to main dataset
+new_ira_tweets <- new_ira_tweets %>%
+  left_join(., account_lang, by="user_name")
+
+rm(account_lang) 
+
+## Calculate number of interactions
+new_ira_tweets <- new_ira_tweets %>% 
+  mutate(across(c(reply_count, quote_count, retweet_count, like_count), ~ as.numeric(.x))) %>%
+  mutate(tot_interactions = sum(reply_count, quote_count, retweet_count, like_count, na.rm=TRUE)) 
+
+## Save
+write_csv(new_ira_tweets, file=here("Data", "new_ira_tweets.csv"))
+saveRDS(new_ira_tweets, file=here("Data", "new_ira_tweets.RDS"))
+
+## Part 2: Get user name daily data -------------------------
+new_ira_tweets_daily <- new_ira_tweets %>% 
+  group_by(user_name, date_time, tweet_language, user_reported_location) %>%
+  summarise(comb_text = paste0(tweet_text, collapse = "\n"),
+            num_tweets = n(),
+            num_likes = sum(like_count, na.rm = TRUE),
+            num_replies = sum(reply_count, na.rm = TRUE),
+            num_quote = sum(quote_count, na.rm = TRUE),
+            num_interactions = sum(tot_interaction, na.rm = TRUE),
+            follower_count = mean(follower_count)) %>% 
+  ungroup()
+
+## Save
+write_csv(new_ira_tweets_daily, file=here("Data", "new_ira_tweets-daily.csv"))
+saveRDS(new_ira_tweets_daily, file=here("Data", "new_ira_tweets-daily.RDS"))
