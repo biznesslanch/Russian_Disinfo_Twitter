@@ -112,7 +112,7 @@ new_ira_tweets_daily <- new_ira_tweets %>%
             num_likes = sum(like_count, na.rm = TRUE),
             num_replies = sum(reply_count, na.rm = TRUE),
             num_quote = sum(quote_count, na.rm = TRUE),
-            num_interactions = sum(tot_interaction, na.rm = TRUE),
+            num_interactions = sum(tot_interactions, na.rm = TRUE),
             follower_count = mean(follower_count)) %>% 
   ungroup()
 

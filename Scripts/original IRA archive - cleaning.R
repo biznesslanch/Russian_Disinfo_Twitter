@@ -96,10 +96,6 @@ Sys.setlocale("LC_CTYPE", "russian")
 
 load(here("Data","biznesslanch-troll_tweets-ru_en.rdata"))
 
-# remove extraneous columns to save memory
-tweet_data <- tweet_data %>%
-  select(-date_time, -tweet_time, -user_screen_name, -user_name2, -account_language)
-
 ## Create combined tweets by day
 tweet_data_user_date <- tweet_data %>% 
   filter(tweet_language %in% c("en", "ru")) %>%
@@ -110,9 +106,9 @@ tweet_data_user_date <- tweet_data %>%
             num_replies = sum(reply_count, na.rm = TRUE),
             num_quote = sum(quote_count, na.rm = TRUE),
             num_interactions = sum(tot_interaction, na.rm = TRUE),
-            follower_count = mean(follower_count)) %>% 
+            follower_count = mean(as.numeric(follower_count), na.true=TRUE)) %>% 
   ungroup()
 
 # Save to csv
 write_csv(tweet_data_user_date, file=here("Data", "ira_archive-combined_daily.csv"))
-saveRDS(tweet_data_user_date, file=here("Data", "ira_archive-combined_daily.csv"))
+saveRDS(tweet_data_user_date, file=here("Data", "ira_archive-combined_daily.rds"))
