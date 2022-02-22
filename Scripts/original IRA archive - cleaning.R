@@ -99,7 +99,8 @@ load(here("Data","biznesslanch-troll_tweets-ru_en.rdata"))
 ## Create combined tweets by day
 tweet_data_user_date <- tweet_data %>% 
   filter(tweet_language %in% c("en", "ru")) %>%
-  group_by(user_id, date, tweet_language, user_reported_location) %>%
+  rename(user_name=user_id) %>%
+  group_by(user_name,user_screen_name, date, tweet_language, user_reported_location) %>%
   summarise(comb_text = paste0(tweet_text, collapse = "\n"),
             num_tweets = n(),
             num_likes = sum(like_count, na.rm = TRUE),
