@@ -102,20 +102,21 @@ new_ira_tweets <- new_ira_tweets %>%
 
 ## Save
 write_csv(new_ira_tweets, file=here("Data", "new_ira_tweets.csv"))
-saveRDS(new_ira_tweets, file=here("Data", "new_ira_tweets.RDS"))
+saveRDS(new_ira_tweets, file=here("Data", "new_ira_tweets.rds"))
 
 ## Part 2: Get user name daily data -------------------------
 new_ira_tweets_daily <- new_ira_tweets %>% 
-  group_by(user_name, date_time, tweet_language, user_reported_location) %>%
+  mutate(date = date(date_time)) %>%
+  group_by(user_name, date, tweet_language, user_reported_location) %>%
   summarise(comb_text = paste0(tweet_text, collapse = "\n"),
             num_tweets = n(),
             num_likes = sum(like_count, na.rm = TRUE),
             num_replies = sum(reply_count, na.rm = TRUE),
             num_quote = sum(quote_count, na.rm = TRUE),
             num_interactions = sum(tot_interactions, na.rm = TRUE),
-            follower_count = mean(follower_count)) %>% 
+            follower_count = mean(as.numeric(follower_count), na.rm=TRUE)) %>% 
   ungroup()
 
 ## Save
 write_csv(new_ira_tweets_daily, file=here("Data", "new_ira_tweets-daily.csv"))
-saveRDS(new_ira_tweets_daily, file=here("Data", "new_ira_tweets-daily.RDS"))
+saveRDS(new_ira_tweets_daily, file=here("Data", "new_ira_tweets-daily.rds"))
