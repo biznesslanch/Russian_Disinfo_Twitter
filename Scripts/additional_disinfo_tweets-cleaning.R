@@ -23,12 +23,12 @@ filelist <- set_names(x=paste0(getwd(),"/Data/Raw/", filelist),nm=dataset_names)
 new_ira_tweets <- map_dfr(filelist, ~ read_csv(file = .x, 
                                                col_select = c("follower_count", "account_creation_date", "account_language", "tweet_language", "tweet_text", "tweet_time",
                                                               "quote_count", "reply_count","like_count", "retweet_count", "user_screen_name", "user_reported_location"),
-                                               col_types = cols("follower_count"=col_numeric(), "account_creation_date"=col_character(), 
+                                               col_types = cols("follower_count"=col_integer(), "account_creation_date"=col_character(), 
                                                                 "account_language"=col_character(), "tweet_language"=col_character(),
                                                                 "tweet_text"=col_character(), "tweet_time"=col_character(),
-                                                                "quote_count"=col_numeric(), "reply_count"=col_numeric(), 
-                                                                "retweet_count"=col_numeric(), "user_screen_name"=col_character(),
-                                                                "user_reported_location"=col_character(), "like_count"=col_numeric())
+                                                                "quote_count"=col_integer(), "reply_count"=col_integer(), 
+                                                                "retweet_count"=col_integer(), "user_screen_name"=col_character(),
+                                                                "user_reported_location"=col_character(), "like_count"=col_integer())
 ) , .id="dataset")
 
 # filter to English and Russian language tweets only
