@@ -41,4 +41,18 @@ intersect(user_dates$user_screen_name, user_dates_new$user_screen_name)
 user_dates <- bind_rows(user_dates, user_dates_new)
 
 # Need to add code to re-index Anon users
-user_dates <- user
+user_dates <- user_dates %>% 
+  # real twitter usernames are capped at 15 characters, so this sorts users into those who have names and those who don't
+  mutate(user_name_type = case_when(str_length(user_screen_name)<=15 ~ "REAL", 
+                                    TRUE ~ "ANON"))
+
+user_dates_names <- user_dates %>%
+  filter(user_name_type=="ANON") %>% 
+  distinct(user_screen_name, user_name_type) %>%
+  # assign each anon a number
+  group_by(user_screen_name) %>%
+  mutate(user_name = paste(user_name_type, cur_group_id(), sep="-")) %>%
+  select(user_screen_name, user_name) %>%
+  ungroup()
+
+rm(user_dates, user_dates_new)

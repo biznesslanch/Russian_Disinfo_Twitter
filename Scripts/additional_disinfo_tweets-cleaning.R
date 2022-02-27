@@ -1,6 +1,5 @@
 # Russian disinformation - create file for non-IRA archive data
 
-library(data.table)
 library(tidyverse)
 library(lubridate)
 library(here)
@@ -15,19 +14,24 @@ Sys.setlocale("LC_CTYPE", "russian")
 
 # Get list of files in Data/Raw folder
 filelist <- list.files(path = here::here("Data/Raw"))
+dataset_names <- str_remove_all(filelist, "^hashed_|_tweets_csv_hashed.csv|_tweets_csv_hashed_[[:digit:]].csv")
 # append full filenames
-filelist <- paste0(getwd(),"/Data/Raw/", filelist)
+filelist <- set_names(x=paste0(getwd(),"/Data/Raw/", filelist),nm=dataset_names)
 
 # Loop through files and create new dataframe. Keep only selected columns
-# using 'map' and do.call(rbind) b/c map_df throws an error related to bind_rows
-new_ira_tweets <- map(filelist, ~ fread(file = .x, stringsAsFactors = FALSE, encoding = "UTF-8", 
-                                     select = c("follower_count", "account_creation_date", "account_language", "tweet_language", "tweet_text", "tweet_time",
-                                                "quote_count", "reply_count","like_count", "retweet_count", "user_screen_name", "user_reported_location"),
-                                     header = TRUE, verbose = TRUE, blank.lines.skip = TRUE, fill = TRUE, data.table = FALSE))
+# note: updated from original cleaning script to replace 'fread' from data.table wit 'read_csv' from 'readr'
+new_ira_tweets <- map_dfr(filelist, ~ read_csv(file = .x, 
+                                               col_select = c("follower_count", "account_creation_date", "account_language", "tweet_language", "tweet_text", "tweet_time",
+                                                              "quote_count", "reply_count","like_count", "retweet_count", "user_screen_name", "user_reported_location"),
+                                               col_types = cols("follower_count"=col_numeric(), "account_creation_date"=col_character(), 
+                                                                "account_language"=col_character(), "tweet_language"=col_character(),
+                                                                "tweet_text"=col_character(), "tweet_time"=col_character(),
+                                                                "quote_count"=col_numeric(), "reply_count"=col_numeric(), 
+                                                                "retweet_count"=col_numeric(), "user_screen_name"=col_character(),
+                                                                "user_reported_location"=col_character(), "like_count"=col_numeric())
+) , .id="dataset")
 
-new_ira_tweets <- do.call(rbind, new_ira_tweets)
-
-# filter to English and Russian language tweets onl
+# filter to English and Russian language tweets only
 new_ira_tweets <- new_ira_tweets %>% 
   filter(tweet_language %in% c("ru","en"))
 
