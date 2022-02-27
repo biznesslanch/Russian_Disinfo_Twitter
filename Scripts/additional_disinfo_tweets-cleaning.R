@@ -49,16 +49,6 @@ new_ira_tweets <- new_ira_tweets %>%
 new_ira_tweets<- new_ira_tweets %>% 
   mutate(qtr_strat = floor_date(date_time, unit="quarter"))
 
-## Rename anonymous users - start with 2943 to match original IRA dataset
-# get vector of user names that have been anonymized and app
- user_names <- new_ira_tweets %>%
-   mutate(user_name = ifelse(str_length(user_screen_name)<=15, "REAL", "ANON")) %>%
-   mutate(user_id = user_screen_name) %>%
-   filter(user_name=="ANON") %>% 
-   distinct(user_screen_name, user_name) %>%
-   # assign each anon a number, starting at 2943 so that it matches index created in original dataset
-   mutate(user_name = paste(user_name, as.character(seq(2943,2942+length(user_names),by=1)), sep="-"))
-
 # Categorize real vs. anonymized screen names
 new_ira_tweets <- new_ira_tweets %>% 
   # real twitter usernames are capped at 15 characters, so this sorts users into those who have names and those who don't
