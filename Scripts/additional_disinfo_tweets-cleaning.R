@@ -101,7 +101,7 @@ saveRDS(new_ira_tweets, file=here("Data", "new_ira_tweets.rds"))
 ## Part 2: Get user name daily data -------------------------
 new_ira_tweets_daily <- new_ira_tweets %>% 
   mutate(date = date(date_time)) %>%
-  group_by(user_name,user_screen_name, date, tweet_language, user_reported_location) %>%
+  group_by(user_name,user_screen_name, date, tweet_language, bilingual_account, user_reported_location, dataset) %>%
   summarise(comb_text = paste0(tweet_text, collapse = "\n"),
             num_tweets = n(),
             num_likes = sum(like_count, na.rm = TRUE),

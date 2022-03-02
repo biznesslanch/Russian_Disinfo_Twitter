@@ -3,6 +3,8 @@
 # Load packages
 library(tidyverse)
 library(lubridate)
+library(scales)
+library(gt)
 library(here)
 
 # Set R locale to Russian so that Rstudio in Windows will display Russian-language text correctly
@@ -56,3 +58,94 @@ user_dates_names <- user_dates %>%
   ungroup()
 
 rm(user_dates, user_dates_new)
+
+## Load daily and merge ANON names
+original_daily_data <- readRDS(here("Data", "ira_archive-combined_daily.rds"))
+new_daily_data <- readRDS(here("Data", "new_ira_tweets-daily.rds"))
+
+combined_daily_data <- bind_rows(original_daily_data, new_daily_data)
+
+rm(original_daily_data, new_daily_data)
+
+# merge user names 
+combined_daily_data <- left_join(combined_daily_data, user_dates_names, by="user_screen_name")
+rm(user_dates_names)
+
+combined_daily_data <- combined_daily_data %>%
+  mutate(user_name = case_when(is.na(user_name.y) ~ user_screen_name,
+                               TRUE ~ user_name.y)) %>%
+  select(-user_name.x, -user_name.y)
+
+## Determine strata for random sampling
+
+theme_set(theme_classic())
+
+# Plot daily number of tweets
+summary(combined_daily_data$date)
+
+cmcol <- "#440154FF"
+encol <- "#1F9E89FF"
+rucol <- "#FDE725FF"
+
+# All tweets combined
+daily_tweet_volume_plot <- combined_daily_data %>%
+  group_by(date) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets)) +
+    geom_bar(stat="identity", color=cmcol, fill=cmcol) +
+    scale_y_continuous(labels = number_format(big.mark=","), name = "Daily Tweets", breaks = seq(0,6e4,by=5e3)) +
+    scale_x_date(date_breaks = "6 months", date_labels = "%b %y", name=NULL) +
+    labs(title="Daily Tweet Count - Full Twitter Archive",
+         subtitle = "Russian and English-language tweets") +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+ggsave(daily_tweet_volume_plot, filename=here("Plots", "all_tweets_count_time-full_archive.png"), 
+       height=5, width=8)
+
+# Broken out by language
+daily_tweet_volume_english <- combined_daily_data %>%
+  filter(tweet_language=="en") %>%
+  group_by(date) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets)) +
+  geom_bar(stat="identity", color=encol, fill=encol) +
+  scale_y_continuous(labels = number_format(big.mark=","), name = "Daily Tweets", breaks = seq(0,6e4,by=5e3)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b %y", name=NULL) +
+  labs(title="Daily English Tweet Count - Full Twitter Archive") +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+ggsave(daily_tweet_volume_english, filename=here("Plots", "english_tweets_count_time-full_archive.png"), 
+       height=5, width=8)
+
+daily_tweet_volume_russian <- combined_daily_data %>%
+  filter(tweet_language=="ru") %>%
+  group_by(date) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets)) +
+  geom_bar(stat="identity", color=rucol, fill=rucol) +
+  scale_y_continuous(labels = number_format(big.mark=","), name = "Daily Tweets", breaks = seq(0,6e4,by=5e3)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b %y", name=NULL) +
+  labs(title="Daily Russian Tweet Count - Full Twitter Archive") +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+ggsave(daily_tweet_volume_russian, filename=here("Plots", "ru_tweets_count_time-full_archive.png"), 
+       height=5, width=8)
+
+# Summary Table
+combined_daily_data %>%
+  group_by(date, tweet_language) %>%
+  summarize(daily_tweets = sum(num_tweets, na.rm = TRUE)) %>% 
+  group_by(tweet_language) %>%
+  summarize(across(daily_tweets, list(Mean=mean, Std.Dev=sd, Median=median, Min=min, 
+                                    Q1=~quantile(., probs = 0.25), Q3=~quantile(., probs = 0.75),
+                                      Max=max),  .names = "{.fn}")) %>%
+  mutate(tweet_language = str_replace_all(tweet_language, c("en"="English", "ru"="Russian"))) %>%
+  rename(`Tweet Language`=tweet_language) %>%
+  gt() %>%
+    fmt_number(columns = c(2:3,7)) %>%
+    fmt_number(columns = 8, decimals = 0, sep_mark = ",") %>%
+    tab_header(title = "Number of Daily Tweets by Language") %>%
+    cols_align(align = "center") %>%
+    tab_style(locations = list(cells_column_labels(),cells_title(groups = "title")), 
+              style = list(cell_text(weight="bold"),
+                           cell_text(align = "left", weight = "bold")))
