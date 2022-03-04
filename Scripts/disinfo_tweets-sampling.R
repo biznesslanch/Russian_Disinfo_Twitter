@@ -76,7 +76,7 @@ combined_daily_data <- combined_daily_data %>%
                                TRUE ~ user_name.y)) %>%
   select(-user_name.x, -user_name.y)
 
-## Determine strata for random sampling
+## Determine strata for random sampling --------------------------
 
 theme_set(theme_classic())
 
@@ -148,4 +148,126 @@ combined_daily_data %>%
     cols_align(align = "center") %>%
     tab_style(locations = list(cells_column_labels(),cells_title(groups = "title")), 
               style = list(cell_text(weight="bold"),
-                           cell_text(align = "left", weight = "bold")))
+                           cell_text(align = "left", weight = "bold"))) %>%
+  gtsave(filename = here("Tables","all_tweets_count_time-summary_stats.html"))
+
+# Create quarter strata 
+combined_daily_data <- combined_daily_data %>%
+  mutate(quarter = floor_date(date, unit="quarter"))
+
+rm(list=ls(pattern = "^daily_tweet"))
+
+## Examine follower counts ------------------
+# Histogram function plotting data 
+
+summary(combined_daily_data$follower_count)
+
+hist_plots <- function(bins=20, language="en|ru", min_fol=0, max_fol=3e7) {
+  combined_daily_data %>%
+    filter(str_detect(tweet_language, language)) %>%
+    filter(follower_count>=min_fol & follower_count<=max_fol) %>%
+    ggplot(aes(x=follower_count)) +
+      geom_histogram(bins = bins, fill=encol, color=encol) +
+      scale_x_continuous(labels = number_format(big.mark = ",", n.breaks = bins/6, 
+                                                breaks=waiver())) +
+      scale_y_continuous(labels = number_format(big.mark = ","))
+}
+
+# Explore distribution of followers: it's extremely left-skewed, which makes sense. 
+# In general, the default settings aren't terribly useful
+hist_plots()
+hist_plots(language="en")
+hist_plots(language="ru")
+
+# Look at it by quantiles
+pb <- seq(0.1,1, by=0.1)
+pb_names <- map_chr(pb, ~paste0(.x*100,"%"))
+
+quants <- map(pb, ~partial(quantile, probs=.x, na.rm=TRUE)) %>%
+  set_names(nm=pb_names)
+
+combined_daily_data %>%
+  summarize(across(follower_count, list(!!!quants))) %>%
+  pivot_longer(cols = everything())
+
+# Can also stratify by anonymous vs. not. The cut-off is 5,000 followers
+combined_daily_data %>% 
+  mutate(anon = case_when(str_detect(user_name, "^ANON") ~ "Anonymous users",
+                          TRUE ~ "Named users")) %>%
+  group_by(anon) %>%
+  summarize(num_obs = n(),
+            num_tweets = sum(num_tweets, na.rm=TRUE),
+            across(follower_count, list(!!!quants))) %>%
+  pivot_longer(cols=2:13) %>% 
+  pivot_wider(names_from = anon, values_from = value) %>%
+  rename(Measure=name) %>%
+  gt() %>%
+    fmt_number(2:3, decimals = 0) %>%
+    tab_header(title = "Anonymous Users vs. Named Users") %>%
+    cols_align(align = "center") %>%
+    tab_style(locations = list(cells_column_labels(),cells_title(groups = "title")), 
+            style = list(cell_text(weight="bold"),
+                         cell_text(align = "left", weight = "bold"))) %>%
+    gtsave(filename = here("Tables","follower_quantiles_and_tweet_counts.html"))
+
+quants2 <- map(c(0.25,0.5,0.75,1), ~partial(quantile, probs=.x, na.rm=TRUE)) %>%
+  set_names(nm=c("25%","50%","75%","100%"))
+
+combined_daily_data %>% 
+  filter(!str_detect(user_name, "^ANON")) %>%
+  summarize(across(follower_count, list(!!!quants2))) %>%
+  pivot_longer(cols = everything())
+
+# Create follower strata
+# Groups are as follows: For anonymous users 0-50 percentile, 50-80 percentile, 80-100 percentile
+# For real names: in percentiles of 20
+# In effect, this will result in an undersample of account-das with low numbers of followers and an
+# oversample of high follower 
+combined_daily_data <- combined_daily_data %>%
+  mutate(follower_strata = factor(case_when(between(follower_count, 0,400) ~ "0-400",
+                                     between(follower_count, 401,1484) ~ "401-1,484",
+                                     between(follower_count, 1485,4960) ~ "1,485-4,960",
+                                     between(follower_count, 4961,11542) ~ "4,961-11,542",
+                                     between(follower_count, 11543,24920) ~ "11,543-24,920",
+                                     between(follower_count, 24921,44446) ~ "24,921-44,446",
+                                     between(follower_count, 44447,101426) ~ "44,447-101,426",
+                                     between(follower_count, 101427,2883076) ~ "101,427-2,883,076",
+                                     TRUE ~ NA_character_), 
+                                  levels = c("0-400","401-1,484","1,485-4,960","4,961-11,542",
+                                             "11,543-24,920","24,921-44,446","44,447-101,426",
+                                             "101,427-2,883,076")))
+
+combined_daily_data %>% 
+  count(follower_strata)
+
+## Sampling ---------------
+# initial sample size 10% is 92592
+925920*0.1
+
+# set seed 
+set.seed(85107)
+
+# Look at total cell sizes by quarter and follower count
+combined_daily_data %>%
+  count(follower_strata, quarter) %>%
+  pivot_wider(names_from=follower_strata, values_from=n) %>%
+  mutate(across(2:9, ~replace_na(.x,0))) %>%
+  view()
+
+combined_daily_data %>%
+  count(follower_strata, quarter) %>%
+  pivot_wider(names_from=follower_strata, values_from=n) %>%
+  mutate(across(2:9, ~replace_na(.x,0))) %>%
+  gt() %>%
+    data_color(columns = 2:9,
+               colors = col_bin(palette = "viridis",
+                                    domain = NULL,
+                                    bins=7)) %>%
+    fmt_number(columns = 2:9, decimals = 0) %>%
+    tab_header(title = "Strata cell sizes") %>%
+    cols_align(align = "center") %>%
+    tab_style(locations = list(cells_column_labels(),cells_title(groups = "title")), 
+            style = list(cell_text(weight="bold"),
+                         cell_text(align = "left", weight = "bold"))) %>%
+    gtsave(filename = here("Tables","all_tweets_follower_quarter_strata_cells.html"))
+
