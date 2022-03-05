@@ -244,6 +244,10 @@ combined_daily_data %>%
 # initial sample size 10% is 92592
 925920*0.1
 
+# check pop sizes by language - 171,831 English and 754,089 in Russian. This is worth exploring later
+combined_daily_data %>% 
+  count(tweet_language)
+
 # set seed 
 set.seed(85107)
 
@@ -270,4 +274,40 @@ combined_daily_data %>%
             style = list(cell_text(weight="bold"),
                          cell_text(align = "left", weight = "bold"))) %>%
     gtsave(filename = here("Tables","all_tweets_follower_quarter_strata_cells.html"))
+
+# especially early, some of the cells are pretty small, but this is OK given we're mostly interested in 2013-2019
+# Take 10% within follower X quarter strata via dplyr slice
+combined_daily_data_sampled <- combined_daily_data %>%
+  group_by(quarter, follower_strata) %>%
+  slice_sample(prop=0.1, replace=FALSE) %>% 
+  ungroup()
+
+# Limit to English-language tweets 
+# There are 171,831 rows for English tweets - 25% is 42,958
+combined_daily_sampled_en <- combined_daily_data %>%
+  filter(tweet_language=="en") %>%
+  group_by(quarter, follower_strata) %>% 
+  slice_sample(prop=0.25, replace=FALSE) %>%
+  ungroup()
+
+# Russian-language tweets - 754,089 
+combined_daily_sampled_ru <- combined_daily_data %>%
+  filter(tweet_language=="ru") %>%
+  group_by(quarter, follower_strata) %>% 
+  slice_sample(prop=0.1, replace=FALSE) %>%
+  ungroup()
+
+ 
+# Save sampled dataframes
+combined_daily_data_sampled %>%
+  select(-user_screen_name) %>%
+  saveRDS(here("Data","combined_daily_tweets_sampled-all_lang.rds"))
+
+combined_daily_sampled_en %>%
+  select(-user_screen_name) %>%
+  saveRDS(here("Data","combined_daily_tweets_sampled-english.rds"))
+
+combined_daily_sampled_ru %>%
+  select(-user_screen_name) %>%
+  saveRDS(here("Data","combined_daily_tweets_sampled-russian.rds"))
 

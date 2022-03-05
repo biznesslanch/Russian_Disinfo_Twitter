@@ -96,11 +96,17 @@ Sys.setlocale("LC_CTYPE", "russian")
 
 load(here("Data","biznesslanch-troll_tweets-ru_en.rdata"))
 
+# rename/label bilingual account
+tweet_data <- tweet_data %>% 
+  rename(bilingual_account=account_bilingual) %>%
+  mutate(bilingual_account = case_when(bilingual_account=="One Language" ~ "One Language",
+                                       TRUE ~ "Bilingual"))
+
 ## Create combined tweets by day
 tweet_data_user_date <- tweet_data %>% 
   filter(tweet_language %in% c("en", "ru")) %>%
   rename(user_name=user_id) %>%
-  group_by(user_name,user_screen_name, date, tweet_language,bilingual_account, user_reported_location) %>%
+  group_by(user_name,user_screen_name, date, tweet_language, bilingual_account, user_reported_location) %>%
   summarise(comb_text = paste0(tweet_text, collapse = "\n"),
             num_tweets = n(),
             num_likes = sum(like_count, na.rm = TRUE),
