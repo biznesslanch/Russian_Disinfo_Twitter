@@ -311,3 +311,6 @@ combined_daily_sampled_ru %>%
   select(-user_screen_name) %>%
   saveRDS(here("Data","combined_daily_tweets_sampled-russian.rds"))
 
+combined_daily_data %>% 
+  select(-user_screen_name) %>%
+  saveRDS(here("Data", "combined_daily_tweets-original.rds"))
