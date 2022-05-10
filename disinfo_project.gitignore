@@ -1,0 +1,12 @@
+# Ignore Mac system files
+.DS_store
+
+# ignore rproj file
+Russian_Disinfo_Twitter.Rproj
+
+# ignore data files - don’t want to track these to GitHub because of Twitter TOU
+Data
+
+# ignore plan files
+analysis_plan.Rmd
+analysis_plan.html
