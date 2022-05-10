@@ -1,0 +1,196 @@
+---
+title: "Russian Disinfo Tweets - "
+author: "Tom Wonder"
+date: "`r(Sys.date())`"
+output: 
+  html_document:
+    theme: united
+    code_folding: hide
+    toc: TRUE
+    toc_depth: 3
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, fig.align = "center")
+
+library(tidyverse)
+library(lubridate)
+library(gt)
+library(scales)
+library(here)
+
+here::i_am("Markdowns/tweet_descriptives.Rmd")
+
+theme_set(theme_classic())
+
+```
+
+```{r load data}
+
+data <- readRDS(here("Data", "combined_daily_tweets-original.rds"))
+
+```
+
+
+## 
+
+The first step is to look at tweet counts by language over time.
+
+### English
+
+```{r en_over_time}
+
+data %>% 
+  filter(tweet_language=="en") %>%
+  group_by(date) %>%
+  summarise(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets)) +
+    geom_line(color="blue2") +
+    scale_x_date(date_labels = "%b %y", date_breaks = "6 months", name=NULL)+
+    scale_y_continuous(labels = number_format(big.mark=","), name=NULL, 
+                       breaks = seq(0,35000,by=5000),
+                       expand = expansion(mult=c(0.02,0))) +
+    labs(title = "Number of English Language Tweets by day") +
+    theme(axis.text.x = element_text(hjust=1, angle=45))
+
+```
+
+Although some accounts in the collection were active as early as 2010, the bulk of the English-language activity took place between 2015 and 2018 (when most of the IRA-linked accounts were banned). In other words, we find most of the English-language sample the period around the 2016 presidential election. This makes sense given what we know about the Russian influence campaign, although there's almost certainly a selection effect at work here since Twitter banned accounts linked to election disinformation.
+
+The Russian-language tweets are more widely spread over time; there are also a lot more tweets in Russian than in English. The most noticeable spike is in the summer of 2014, which coincides with some of the worst fighting in eastern Ukraine and the shoot-down of Malaysian Air flight MH-17 by Russian-backed separtists. 
+
+
+```{r russian_over_time}
+
+max_val <- data %>% 
+  filter(tweet_language=="ru") %>%
+  group_by(date) %>%
+  summarise(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  summarise(max_tweet = max(num_tweets, na.rm=TRUE)) %>% pull()
+
+data %>% 
+  filter(tweet_language=="ru") %>%
+  group_by(date) %>%
+  summarise(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets)) +
+    geom_line(color="red2") +
+    scale_x_date(date_labels = "%b %y", date_breaks = "6 months", name=NULL)+
+    scale_y_continuous(labels = number_format(big.mark=","), name=NULL, 
+                       breaks = seq(0,round(max_val,-4),by=5000),
+                       expand = expansion(mult=c(0.02,0))) +
+    labs(title = "Number of Russian Language Tweets by day") +
+    theme(axis.text.x = element_text(hjust=1, angle=45))
+
+```
+
+One of the most interesting aspects of the collection is the prevalance of bilingual accounts (accounts tweeting in both Russian and English). Almost 2,000 accounts tweeted in both English and Russian. 
+
+```{r bilingual}
+
+## Table
+data %>%
+  group_by(user_name, bilingual_account, tweet_language) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ungroup() %>%
+  group_by(bilingual_account, tweet_language) %>%
+  summarize(`Tweet Count` = sum(num_tweets, na.rm=TRUE),
+            `Number of Accounts` = n()) %>%
+  arrange(desc(bilingual_account)) %>%
+  mutate(tweet_language = str_replace_all(tweet_language, c("ru"="Russian",
+                                                            "en"="English"))) %>%
+  gt() %>%
+    fmt_number(columns = 3:4, decimals = 0) %>%
+    cols_align("center") %>%
+    cols_label(tweet_language = "Tweet Language") %>%
+    tab_style(style = cell_text(weight = "bold"),
+              locations = cells_column_labels()) %>%
+    tab_style(style = cell_text(style="italic"),
+              locations = cells_row_groups())
+
+```
+
+One might expect these bilingual accounts to be less credible to readers (at least in the American audience), particularly as more attention was given to Russian disinformation efforts as the 2016 campaign went on. We can look at how these accounts were used over time and whether accounts with more followers (with presumably more influence) tweeted primarly in one language. 
+
+```{r bilingual over time}
+
+data %>% 
+  filter(bilingual_account=="Bilingual") %>%
+  group_by(tweet_language, date) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets, color=tweet_language, linetype=tweet_language)) +
+    geom_line() +
+    scale_color_manual(values=c("ru"="red2", "en"="blue2"), name="Language") +
+    scale_linetype_manual(values=c("ru"="solid", "en"="dashed"), name="Language") +
+    scale_x_date(date_labels = "%b %y", date_breaks = "9 months", name=NULL)+
+    scale_y_continuous(labels = number_format(big.mark=","), name=NULL, 
+                       breaks = seq(0,60000,by=5000),
+                       expand = expansion(mult=c(0.02,0))) +
+    facet_wrap(~tweet_language) +
+    labs(title = "Tweets from bilingual accounts by day") +
+    theme(axis.text.x = element_text(hjust=1, angle=45),
+          legend.position = "bottom")
+
+data %>% 
+  filter(bilingual_account=="Bilingual" & date>="2015-01-01" & date<="2017-12-31") %>%
+  group_by(tweet_language, date) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ggplot(aes(x=date, y=num_tweets, color=tweet_language, linetype=tweet_language)) +
+    geom_line() +
+    scale_color_manual(values=c("ru"="red2", "en"="blue2"), name="Language") +
+    scale_linetype_manual(values=c("ru"="solid", "en"="dashed"), name="Language") +
+    scale_x_date(date_labels = "%b %y", date_breaks = "4 months", name=NULL)+
+    scale_y_continuous(labels = number_format(big.mark=","), name=NULL, 
+                       breaks = seq(0,60000,by=5000),
+                       expand = expansion(mult=c(0.02,0))) +
+    labs(title = "Tweets from bilingual accounts by day",
+         subtitle = "2015-2017") +
+    theme(axis.text.x = element_text(hjust=1, angle=45),
+          legend.position = "bottom")
+
+```
+
+```{r by users}
+
+data %>%
+  filter(tweet_language=="en") %>%
+  group_by(follower_strata, date) %>%
+  summarize(num_tweets = sum(num_tweets, na.rm=TRUE)) %>%
+  ungroup() %>%
+    ggplot(aes(x=date, y=num_tweets, color=follower_strata)) +
+    geom_line() +
+    # scale_color_manual(values=c("ru"="red2", "en"="blue2"), name="Language") +
+    # scale_linetype_manual(values=c("ru"="solid", "en"="dashed"), name="Language") +
+    scale_color_viridis_d() +
+    scale_x_date(date_labels = "%b %y", date_breaks = "12 months", name=NULL)+
+    scale_y_continuous(labels = number_format(big.mark=","), name=NULL, 
+                       expand = expansion(mult=c(0.02,0))) +
+    facet_wrap(~follower_strata, scales = "free_y") +
+    labs(title = "Tweets from bilingual accounts by day",
+         subtitle = "Number of followers") +
+    theme(axis.text.x = element_text(hjust=1, angle=45),
+          legend.position = "bottom")
+
+
+```
+
+```{r corrs}
+cor(data$follower_count, data$num_interactions, use="pairwise.complete.obs")
+
+data %>% 
+  ggplot(aes(x=follower_count, y=num_interactions, fill=tweet_language)) +
+    geom_point(alpha=0.2, shape=21) +
+    scale_fill_manual(values=c("en"="blue2", "ru"="red2"))
+
+```
+
+```{r top_tweet}
+
+data %>%
+  filter(tweet_language=="en") %>%
+  arrange(desc(num_interactions)) %>%
+  slice_head(n=1) %>%
+  select(user_name, num_interactions, follower_count, date, comb_test)
+
+```
+
